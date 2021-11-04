@@ -8,4 +8,6 @@ router.register('snapshot', SnapshotViewSet)    # api/snapshot
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('alert', play_alert),
+    path('announce', play_announce),
 ]
