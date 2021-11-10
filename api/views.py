@@ -2,11 +2,12 @@ import os
 from io import BytesIO
 import json
 from requests import post
+from django.http import HttpResponse
 from rest_framework import viewsets
-from .models import SnapshotFile
-from .serializers import SnapshotFileSerializer
-from .paginations import SnapshotFilePageNumberPagination
-from rest_framework.response import Response
+from .models import SnapshotFile, VideoFile
+from .serializers import SnapshotFileSerializer, VideoFileSerializer
+from .paginations import SnapshotFilePageNumberPagination, VideoFilePageNumberPagination
+# from rest_framework.response import Response
 
 from pydub import AudioSegment, playback
 from .secret_config import kakao_rest_api_key
@@ -23,6 +24,11 @@ class SnapshotViewSet(viewsets.ModelViewSet):
     #     serializer = self.get_serializer(instance)
     #     res = Response(serializer.data)
     #     return res
+
+class VideoViewSet(viewsets.ModelViewSet):
+    queryset = VideoFile.objects.all()
+    serializer_class = VideoFileSerializer
+    pagination_class = VideoFilePageNumberPagination
 
 
 class KakaoSound:
@@ -75,6 +81,7 @@ class KakaoSound:
 def play_alert(request):
     sound = AudioSegment.from_mp3(os.path.join(MEDIA_ROOT,'audio/alert.mp3'))
     playback.play(sound)
+    return HttpResponse('<h1>Alerted</h1>')
 
 kakao = KakaoSound()
 
@@ -82,3 +89,4 @@ kakao = KakaoSound()
 def play_announce(request):
     msg = request.GET.get('message', None)
     kakao.synthesize(msg)
+    return HttpResponse('<h1>Announced</h1>')
