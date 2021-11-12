@@ -4,8 +4,8 @@ from api.views import *
 
 router = routers.DefaultRouter()
 
-router.register('snapshot', SnapshotViewSet)    # api/snapshot
-router.register('video', VideoViewSet)    # api/snapshot
+# router.register('snapshot', SnapshotViewSet)    # api/snapshot
+# router.register('video', VideoViewSet)    # api/video
 
 urlpatterns = [
     path('', include(router.urls)),

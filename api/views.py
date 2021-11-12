@@ -4,31 +4,31 @@ import json
 from requests import post
 from django.http import HttpResponse
 from rest_framework import viewsets
-from .models import SnapshotFile, VideoFile
-from .serializers import SnapshotFileSerializer, VideoFileSerializer
-from .paginations import SnapshotFilePageNumberPagination, VideoFilePageNumberPagination
+# from .models import SnapshotFile, VideoFile
+# from .serializers import SnapshotFileSerializer, VideoFileSerializer
+# from .paginations import SnapshotFilePageNumberPagination, VideoFilePageNumberPagination
 # from rest_framework.response import Response
 
 from pydub import AudioSegment, playback
 from .secret_config import kakao_rest_api_key
 from mysite.settings import MEDIA_ROOT
 
-class SnapshotViewSet(viewsets.ModelViewSet):
-    queryset = SnapshotFile.objects.all()
-    serializer_class = SnapshotFileSerializer
-    pagination_class = SnapshotFilePageNumberPagination
+# class SnapshotViewSet(viewsets.ModelViewSet):
+#     queryset = SnapshotFile.objects.all()
+#     serializer_class = SnapshotFileSerializer
+#     pagination_class = SnapshotFilePageNumberPagination
 
-    # 이미지 url 입력 시 다운로드되는 문제
-    # def retrieve(self, request, *args, **kwargs):
-    #     instance = self.get_object()
-    #     serializer = self.get_serializer(instance)
-    #     res = Response(serializer.data)
-    #     return res
+#     # 이미지 url 입력 시 다운로드되는 문제
+#     # def retrieve(self, request, *args, **kwargs):
+#     #     instance = self.get_object()
+#     #     serializer = self.get_serializer(instance)
+#     #     res = Response(serializer.data)
+#     #     return res
 
-class VideoViewSet(viewsets.ModelViewSet):
-    queryset = VideoFile.objects.all()
-    serializer_class = VideoFileSerializer
-    pagination_class = VideoFilePageNumberPagination
+# class VideoViewSet(viewsets.ModelViewSet):
+#     queryset = VideoFile.objects.all()
+#     serializer_class = VideoFileSerializer
+#     pagination_class = VideoFilePageNumberPagination
 
 
 class KakaoSound:

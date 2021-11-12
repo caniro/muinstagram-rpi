@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.conf.urls.static import static
 from django.urls import path, include
 from . import settings
+import mysite.mcp_3008
 
 urlpatterns = [
     path('api/', include('api.urls')),

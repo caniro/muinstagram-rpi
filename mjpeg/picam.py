@@ -5,10 +5,11 @@ import cv2
 import numpy as np
 from PIL import Image
 import requests as req
-from threading import Condition, Lock
+from threading import Condition, Lock, Thread
 from picamera import PiCamera
 from subprocess import call
 from mysite.settings import BASE_DIR
+from config import BUCKET_NAME, s3_connection, HOSTNAME
 
 SNAPSHOT_DIR = os.path.join(BASE_DIR, 'media/snapshot/')
 VIDEO_DIR = os.path.join(BASE_DIR, 'media/video/')
@@ -64,6 +65,32 @@ class PiCam:
 #         except Exception as e:
 #             print('error:', e)
 
+def is_elapsed_one_sec():
+    global last_time
+
+    now = datetime.now()
+    if now - last_time < timedelta(milliseconds=1000):
+        return False
+    last_time = now
+    return True
+
+def upload_image_frame(frame):
+    user_id = 12
+    basename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
+    print(basename)
+    key = f'{user_id}/{HOSTNAME}/image/{basename}'
+    s3 = s3_connection()
+    s3.put_object(Bucket=BUCKET_NAME, Key=key,
+                    Body=BytesIO(frame), ACL='public-read')
+    # DB에 저장도 추가할 것
+
+def save_image(frame):
+    # upload_image_frame(frame)
+    if not is_elapsed_one_sec():
+        return
+    thread = Thread(target=upload_image_frame, args=(frame, ))
+    thread.start()
+
 # 전역 객체로 전체 사이클 관리 (IPC 때문에 객체로 사용)
 # api 요청시 남은 프레임을 갱신
 class Recording:
@@ -73,6 +100,7 @@ class Recording:
         self.remain_frames = 0
 
 last_time = datetime.now()
+last_time_image = datetime.now()
 FRAMERATE = 5 # 초당 프레임 수
 TARGET_TIME = 10 # 녹화 시간
 TARGET_FRAME = FRAMERATE * TARGET_TIME
@@ -109,7 +137,6 @@ def upload_video(url, file_path):
         })
     except Exception as e:
         print('error:', e)
-
 
 def save_video(frame):
     global last_time, file_path, video
@@ -165,7 +192,7 @@ class StreamingOutput(object):
                 self.frame = self.buffer.getvalue()
                 self.condition.notify_all()
             self.buffer.seek(0)
-            # save_image(self.frame)
+            save_image(self.frame)
             save_video(self.frame)
         return self.buffer.write(buf)
 
