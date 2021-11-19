@@ -13,6 +13,7 @@ from config import BUCKET_NAME, s3_connection, HOSTNAME
 
 SNAPSHOT_DIR = os.path.join(BASE_DIR, 'media/snapshot/')
 VIDEO_DIR = os.path.join(BASE_DIR, 'media/video/')
+S3_BUCKET_DOMAIN = 'https://team4-ng.s3.ap-northeast-3.amazonaws.com/'
 
 class PiCam:
     def __init__(self, framerate=25, width=640, height=480):
@@ -65,6 +66,14 @@ class PiCam:
 #         except Exception as e:
 #             print('error:', e)
 
+# 전역 객체로 전체 사이클 관리 (IPC 때문에 객체로 사용)
+# api 요청시 남은 프레임을 갱신
+class Recording:
+    def __init__(self):
+        self.record_flag = False
+        self.is_recording = False
+        self.remain_frames = 0
+
 def is_elapsed_one_sec():
     global last_time
 
@@ -74,30 +83,68 @@ def is_elapsed_one_sec():
     last_time = now
     return True
 
-def upload_image_frame(frame):
-    user_id = 12
-    basename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
-    print(basename)
-    key = f'{user_id}/{HOSTNAME}/image/{basename}'
+def upload_to_s3(key, frame):
     s3 = s3_connection()
     s3.put_object(Bucket=BUCKET_NAME, Key=key,
                     Body=BytesIO(frame), ACL='public-read')
-    # DB에 저장도 추가할 것
+
+# 이미지 한 장씩 버킷에 저장
+def upload_image_frame(frame):
+    user_id = 12
+    basename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
+    print(basename, 'saved')
+    key = f'{user_id}/{HOSTNAME}/image/{basename}'
+    upload_to_s3(key, frame)
+    # DB에 저장
+    # url = os.path.join(S3_BUCKET_DOMAIN, key)
+    # from .models import EventImage
+    # image = EventImage()
+    # image.url = url 이런식으로 저장
+    # image.save()
+
+event_image = Recording()
+event_last_filename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
+event_lock = Lock()
+EVENT_TARGET_FRAME = 60
+
+def check_event(frame):
+    global event_last_filename
+
+    if not event_image.record_flag or len(frame) == 0:
+        return
+    event_new_filename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
+    if event_new_filename == event_last_filename:
+        return
+    event_last_filename = event_new_filename
+
+    if not event_image.is_recording:
+        print('이벤트 발생 감지')
+        event_image.is_recording = True
+        event_image.remain_frames = TARGET_FRAME
+
+    if event_image.is_recording:
+        print('이미지 저장 중... 남은 프레임:', event_image.remain_frames)
+        try:
+            upload_image_frame(frame)
+            event_image.remain_frames -= 1
+        except Exception as e:
+            print('error:', e)
+
+    # 원하는 프레임을 다 찍었으면 api 호출하여 db 거쳐서 파일로 저장
+    if event_image.is_recording and event_image.remain_frames == 0:
+        print('이미지 저장 완료')
+        event_lock.acquire()
+        event_image.record_flag = False
+        event_image.is_recording = False
+        event_lock.release()
 
 def save_image(frame):
-    # upload_image_frame(frame)
     if not is_elapsed_one_sec():
         return
-    thread = Thread(target=upload_image_frame, args=(frame, ))
-    thread.start()
+    # thread = Thread(target=upload_image_frame, args=(frame, ))
+    # thread.start()
+    check_event(frame)
 
-# 전역 객체로 전체 사이클 관리 (IPC 때문에 객체로 사용)
-# api 요청시 남은 프레임을 갱신
-class Recording:
-    def __init__(self):
-        self.record_flag = False
-        self.is_recording = False
-        self.remain_frames = 0
 
 last_time = datetime.now()
 last_time_image = datetime.now()
@@ -192,8 +239,9 @@ class StreamingOutput(object):
                 self.frame = self.buffer.getvalue()
                 self.condition.notify_all()
             self.buffer.seek(0)
-            save_image(self.frame)
-            save_video(self.frame)
+            # save_image(self.frame)
+            # save_video(self.frame)
+            check_event(self.frame)
         return self.buffer.write(buf)
 
 class MJpegStreamCam(PiCam):
@@ -214,3 +262,10 @@ class MJpegStreamCam(PiCam):
 
     def __del__(self):
         self.camera.stop_recording()
+
+'''
+Todo
+  - 이벤트 발생 시 클라우드에서 GET 요청 -> 라즈에서 받으면 1분간 이미지 저장 & EventImage 테이블에 URL 기록
+  - 카메라 id 어떤 식으로 지정 ?
+  - 
+'''
