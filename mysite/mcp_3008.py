@@ -2,10 +2,11 @@ import spidev
 from requests import get
 from threading import Thread
 from time import sleep
+from config import SERVER_HOST, HOSTNAME
 
-SMOKE_BOUNDARY = 500
+SMOKE_BOUNDARY = 450
 SMOKE_INTERVAL = 1
-SMOKE_SERVER_URL = 'http://192.168.117.22:8000/sensor/smoke'
+SMOKE_SERVER_URL = 'http://' + SERVER_HOST + ':8000/sensor/smoke'
 SMOKE_CHANNEL = 0
 
 spi = spidev.SpiDev()
@@ -22,12 +23,12 @@ def read_adc(adcnum):
 
 def check_smoke():
     while True:
-        smoke_value = 1023 - read_adc(SMOKE_CHANNEL)
-        # print(f"smoke sensor value: {smoke_value}")
+        smoke_value = read_adc(SMOKE_CHANNEL)
+        print(f"smoke sensor value: {smoke_value}")
         sleep(SMOKE_INTERVAL)
         if smoke_value > SMOKE_BOUNDARY:
             try:
-                res = get(SMOKE_SERVER_URL)
+                res = get(SMOKE_SERVER_URL + f'?camera={HOSTNAME}')
             except Exception as e:
                 print('error:', e)
 

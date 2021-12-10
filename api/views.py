@@ -6,8 +6,9 @@ from django.http import HttpResponse
 from pydub import AudioSegment, playback
 from .secret_config import kakao_rest_api_key
 from mysite.settings import MEDIA_ROOT
-from .models import AlertTbl, Shop
-
+# from .models import AlertTbl
+from mjpeg.models import Camera, Shop
+from config import HOSTNAME
 
 class KakaoSound:
     def __init__(self):
@@ -55,14 +56,16 @@ class KakaoSound:
             song = AudioSegment.from_mp3(sound)
             playback.play(song)
 
-shop = Shop.objects.get(id=9)
 
-# 싱글톤 적용할 것
+camera_row = Camera.objects.get(name=HOSTNAME)
+shop = Shop.objects.get(id=camera_row.id)
+
 def play_alert(request):
-    sound = AudioSegment.from_mp3(os.path.join(MEDIA_ROOT,'audio/alert.mp3'))
+    file_name = 'audio/alert_' + request.GET.get('sound', '1') + '.mp3'
+    sound = AudioSegment.from_mp3(os.path.join(MEDIA_ROOT, file_name))
     playback.play(sound)
-    alert = AlertTbl(shop=shop, alert_msg='alert_audio')
-    alert.save()
+    # alert = AlertTbl(shop=shop, alert_msg='alert_audio')
+    # alert.save()
     return HttpResponse('<h1>Alerted</h1>')
 
 kakao = KakaoSound()
@@ -71,6 +74,6 @@ kakao = KakaoSound()
 def play_announce(request):
     msg = request.GET.get('message', None)
     kakao.synthesize(msg)
-    alert = AlertTbl(shop=shop, alert_msg=msg)
-    alert.save()
+    # alert = AlertTbl(shop=shop, alert_msg=msg)
+    # alert.save()
     return HttpResponse('<h1>Announced</h1>')

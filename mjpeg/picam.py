@@ -50,20 +50,21 @@ def upload_to_s3(key, frame):
                     Body=BytesIO(frame), ACL='public-read')
 
 camera_row = Camera.objects.get(name=HOSTNAME)
-user = camera_row.user
+# user = camera_row.user
 
 # 이미지 한 장씩 버킷에 저장
 def upload_image_frame(frame):
     basename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
-    print(basename, 'saved')
-    key = f'{user.id}/{HOSTNAME}/image/{basename}'
+    # print(basename, 'saved')
+    # key = f'{user.id}/{HOSTNAME}/image/{basename}'
+    key = f'img/{HOSTNAME}/{basename}'
     upload_to_s3(key, frame)
     # DB 저장
     image_url = os.path.join(S3_BUCKET_DOMAIN, key)
     image = Image()
     image.imgUrl = image_url
     image.camera_id = camera_row
-    image.user_id = user
+    # image.user_id = user
     image.save()
 
 event_image = Recording()

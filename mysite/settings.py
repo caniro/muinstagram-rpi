@@ -27,7 +27,7 @@ SECRET_KEY = SECRET_KEY
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '192.168.117.24', 'muinstagram.store']
+ALLOWED_HOSTS = ['localhost', '192.168.219.100']
 
 
 # Application definition
